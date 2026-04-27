@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fact Finder: Pro Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --dark: #0a0a0c;
+            --neon-yellow: #f0f331;
+            --neon-blue: #3182f3;
+            --neon-green: #39ff14;
+            --neon-pink: #ff007f;
+            --glass: rgba(255, 255, 255, 0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(49, 130, 243, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(240, 243, 49, 0.1) 0%, transparent 40%);
+        }
+
+        .container {
+            width: 95%;
+            max-width: 450px;
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 32px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; animation: zoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            line-height: 0.9;
+            background: linear-gradient(to bottom, var(--neon-yellow), #ffa500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .sub-text { color: #888; margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px; }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid #333;
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(49, 130, 243, 0.3); }
+
+        .btn {
+            background: var(--neon-blue);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            transition: 0.2s;
+            box-shadow: 0 6px 0 #1e5bb8;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #1e5bb8; }
+        .btn-success { background: var(--neon-green); color: black; box-shadow: 0 6px 0 #2dbd11; }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+        .lives { font-size: 1.2rem; color: var(--neon-pink); }
+        .mode-badge {
+            background: var(--neon-yellow);
+            color: black;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 25px 20px;
+            margin: 15px 0;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .instruction { font-size: 0.8rem; color: var(--neon-blue); font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+
+        .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .choice-btn {
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-fact { background: #10b981; }
+        .btn-asumsi { background: #f43f5e; }
+
+        .fact-prompt {
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px dashed var(--neon-green);
+            color: var(--neon-green);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        #input-area { display: none; margin-top: 10px; }
+
+        .feedback-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            border-radius: 32px;
+            padding: 2rem;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 50;
+        }
+        .feedback-overlay.active { display: flex; animation: slideUp 0.3s forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .reason-box {
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--neon-blue);
+            margin: 15px 0;
+        }
+
+        /* Reflection Page Styles */
+        .analogy-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .analogy-title { color: var(--neon-yellow); font-weight: 800; margin-bottom: 10px; font-size: 1.1rem; }
+        .analogy-text { font-size: 0.9rem; line-height: 1.6; color: #ccc; }
+
+        #music-btn {
+            position: fixed;
+            bottom: 20px; right: 20px;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Feedback Overlay -->
+    <div id="feedback" class="feedback-overlay">
+        <h2 id="feedback-status" style="font-size: 1.8rem;">BAGUS!</h2>
+        <div class="reason-box" id="feedback-reason"></div>
+        <button class="btn" onclick="confirmFeedback()">LANJUTKAN ➔</button>
+    </div>
+
+    <!-- Screen 1: Welcome -->
+    <div id="screen-welcome" class="screen active">
+        <h1>FACT<br>FINDER</h1>
+        <p class="sub-text">PRO EDITION FOR LEADERS</p>
+        <input type="text" id="user-name" placeholder="Nama Lengkap">
+        <input type="text" id="user-nik" placeholder="NIK Karyawan">
+        <button class="btn" onclick="toRules()">GAS MAIN ➔</button>
+    </div>
+
+    <!-- Screen 2: Rules -->
+    <div id="screen-rules" class="screen">
+        <h1>MISI KAMU</h1>
+        <div style="text-align: left; font-size: 0.9rem; margin-bottom: 20px;">
+            <p>1. <b>Tebak:</b> Bedakan Fakta vs Asumsi.</p>
+            <p>2. <b>Koreksi:</b> Gunakan data untuk memperbaiki kalimat.</p>
+            <p style="margin-top:10px;">❤️ Target: <b>Min. 5/6 Benar</b> untuk Post-Test.</p>
+        </div>
+        <button class="btn" onclick="startGame()">START! ➔</button>
+    </div>
+
+    <!-- Screen 3: Mid-Game Rules -->
+    <div id="screen-mid-rules" class="screen">
+        <h1>LEVEL UP! 🚀</h1>
+        <div style="text-align: left; font-size: 1rem; line-height: 1.6; margin-bottom: 20px; color: var(--neon-yellow);">
+            <p>Sekarang saatnya <b>praktik!</b></p>
+            <p style="color: white; margin-top: 10px;">Gunakan <b>Data Fakta</b> yang disediakan untuk memperbaiki kalimat asumsi di bawahnya.</p>
+        </div>
+        <button class="btn" onclick="startInputMode()">LANJUT KE ISIAN ➔</button>
+    </div>
+
+    <!-- Screen 4: Game -->
+    <div id="screen-game" class="screen">
+        <div class="header-info">
+            <div id="progress">SOAL 1/6</div>
+            <div id="mode-badge" class="mode-badge">TEBAK</div>
+            <div class="lives" id="lives-display">❤️❤️❤️</div>
+        </div>
+        
+        <div class="card">
+            <div class="instruction" id="instruction-text">Mekanik: Tebak</div>
+            <div id="question-text" style="font-weight: 700; font-size: 1.1rem; margin-bottom: 15px;">"..."</div>
+            
+            <div id="fact-display" class="fact-prompt" style="display: none;">
+                <b>DATA FAKTA:</b> <span id="provided-fact-text"></span>
+            </div>
+        </div>
+
+        <div class="choices" id="choice-area">
+            <button class="choice-btn btn-fact" onclick="checkChoice('fakta')">FAKTA</button>
+            <button class="choice-btn btn-asumsi" onclick="checkChoice('asumsi')">ASUMSI</button>
+        </div>
+
+        <div id="input-area">
+            <input type="text" id="answer-input" placeholder="Tulis kalimat koreksinya di sini...">
+            <button class="btn" onclick="checkInput()">SUBMIT KOREKSI</button>
+        </div>
+    </div>
+
+    <!-- Screen 5: Result -->
+    <div id="screen-result" class="screen">
+        <h1 id="res-title">SKOR AKHIR</h1>
+        <div id="res-score" style="font-size: 4rem; font-weight: 800; margin: 15px 0; color: var(--neon-yellow);">0/6</div>
+        <p id="res-msg" style="margin-bottom: 20px;"></p>
+        <button class="btn btn-success" id="btn-next-step" onclick="showReflection()">PELAJARI MAKNA ➔</button>
+        <button class="btn" id="btn-retry" style="display:none; margin-top:10px;" onclick="location.reload()">COBA LAGI</button>
+    </div>
+
+    <!-- Screen 6: Reflection -->
+    <div id="screen-reflection" class="screen">
+        <h1>REFLEKSI</h1>
+        <div class="analogy-box">
+            <div class="analogy-title">Analogi Jembatan Kepercayaan</div>
+            <div class="analogy-text">
+                Hubungan Anda dengan tim adalah sebuah <b>Jembatan</b>. <br><br>
+                <b>Asumsi</b> adalah retakan kecil yang jika dibiarkan akan meruntuhkan struktur. Saat Anda bicara dengan asumsi, tim akan merasa "diserang" dan jembatan tertutup. <br><br>
+                <b>Fakta</b> adalah pilar beton yang kokoh. Bicara dengan fakta membangun keamanan psikologis, membuat jembatan tetap terbuka bagi dialog yang jujur.
+            </div>
+        </div>
+        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 20px;">
+            Sebagai Supervisor & Manager, kata-kata Anda adalah alat konstruksi paling kuat. Gunakanlah dengan bijak.
+        </p>
+        <button class="btn" onclick="finalPostTest()">OKE SAYA AKAN MENERAPKANNYA! ➔</button>
+    </div>
+</div>
+
+<button id="music-btn" onclick="toggleMusic(true)">🎵</button>
+
+<script>
+    // --- AUDIO ENGINE (Fun Game Music - Tempo Adjusted) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isMusicPlaying = false;
+    let musicInterval;
+
+    function playNote(freq, dur, startTime) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.015, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + dur);
+    }
+
+    function toggleMusic(manual = false) {
+        if(!isMusicPlaying) {
+            isMusicPlaying = true;
+            document.getElementById('music-btn').innerText = "🔊";
+            const melody = [261, 329, 392, 523, 392, 329]; 
+            // Tempo diperlambat: interval 1400ms dan jarak antar nada 0.25s
+            musicInterval = setInterval(() => {
+                melody.forEach((f, i) => {
+                    playNote(f, 0.3, audioCtx.currentTime + (i * 0.25));
+                });
+            }, 1400);
+        } else if(manual) {
+            isMusicPlaying = false;
+            document.getElementById('music-btn').innerText = "🎵";
+            clearInterval(musicInterval);
+        }
+    }
+
+    function playSFX(type) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.connect(g); g.connect(audioCtx.destination);
+        if(type === 'win') {
+            osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1046, audioCtx.currentTime + 0.1);
+        } else {
+            osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.2);
+        }
+        g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    // --- GAME CONTENT ---
+    const questions = [
+        { mode: 'choice', text: '"Laporan ini berantakan sekali dan tidak profesional."', answer: 'asumsi', reason: 'Kata "berantakan" dan "tidak profesional" adalah label subjektif.' },
+        { mode: 'choice', text: '"Dia tidak membalas email saya sejak 3 hari yang lalu."', answer: 'fakta', reason: 'Ini data objektif yang bisa diverifikasi.' },
+        { mode: 'choice', text: '"Tim kamu sepertinya sengaja memperlambat proses produksi."', answer: 'asumsi', reason: 'Menebak niat (sengaja) adalah bentuk Telling Story.' },
+        { 
+            mode: 'input', 
+            text: 'Asumsi: "Kamu orangnya tidak teliti."', 
+            factData: 'Ditemukan 3 kesalahan ketik pada halaman pertama laporan.',
+            keywords: ['3', 'tiga', 'kesalahan', 'ketik', 'halaman'],
+            reason: 'Koreksi: "Ada 3 kesalahan ketik yang saya temukan di halaman pertama laporan ini."',
+            answer: 'fakta' 
+        },
+        { 
+            mode: 'input', 
+            text: 'Asumsi: "Meeting ini sangat membosankan."', 
+            factData: 'Meeting sudah berjalan 2 jam dan kita belum membahas agenda utama.',
+            keywords: ['2', 'dua', 'jam', 'agenda', 'belum'],
+            reason: 'Koreksi: "Meeting ini sudah berjalan selama 2 jam, namun agenda utama kita belum dibahas."',
+            answer: 'fakta'
+        },
+        { 
+            mode: 'input', 
+            text: 'Asumsi: "Dia sangat sombong."', 
+            factData: 'Tadi pagi dia tidak membalas sapaan saat kita berpapasan di lorong.',
+            keywords: ['sapa', 'balas', 'papasan', 'lorong'],
+            reason: 'Koreksi: "Tadi pagi saat berpapasan di lorong, dia tidak membalas sapaan saya."',
+            answer: 'fakta'
+        }
+    ];
+
+    let currentQ = 0;
+    let lives = 3;
+    let score = 0;
+    let userData = { name: "", nik: "" };
+
+    function toRules() {
+        userData.name = document.getElementById('user-name').value;
+        userData.nik = document.getElementById('user-nik').value;
+        if(!userData.name || !userData.nik) return alert("Lengkapi data dulu Boss!");
+        toggleMusic(); // Autoplay music
+        showScreen('screen-rules');
+    }
+
+    function startGame() {
+        showScreen('screen-game');
+        loadQuestion();
+    }
+
+    function startInputMode() {
+        showScreen('screen-game');
+        loadQuestion();
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function loadQuestion() {
+        const q = questions[currentQ];
+        document.getElementById('progress').innerText = `SOAL ${currentQ + 1}/${questions.length}`;
+        document.getElementById('question-text').innerText = q.text;
+        document.getElementById('lives-display').innerText = "❤️".repeat(lives);
+        
+        if(q.mode === 'choice') {
+            document.getElementById('mode-badge').innerText = "TEBAK";
+            document.getElementById('mode-badge').style.background = "var(--neon-yellow)";
+            document.getElementById('instruction-text').innerText = "MEKANIK: TEBAK";
+            document.getElementById('fact-display').style.display = 'none';
+            document.getElementById('choice-area').style.display = 'grid';
+            document.getElementById('input-area').style.display = 'none';
+        } else {
+            document.getElementById('mode-badge').innerText = "TULIS";
+            document.getElementById('mode-badge').style.background = "var(--neon-green)";
+            document.getElementById('instruction-text').innerText = "MEKANIK: KOREKSI";
+            document.getElementById('provided-fact-text').innerText = q.factData;
+            document.getElementById('fact-display').style.display = 'block';
+            document.getElementById('choice-area').style.display = 'none';
+            document.getElementById('input-area').style.display = 'block';
+            document.getElementById('answer-input').value = "";
+        }
+    }
+
+    function checkChoice(val) {
+        const q = questions[currentQ];
+        if(val === q.answer) {
+            handleFeedback(true, q.reason);
+        } else {
+            handleFeedback(false, q.reason);
+        }
+    }
+
+    function checkInput() {
+        const q = questions[currentQ];
+        const val = document.getElementById('answer-input').value.toLowerCase();
+        if(val.length < 8) return alert("Gunakan data fakta yang diberikan dalam kalimatmu!");
+
+        let matchCount = 0;
+        q.keywords.forEach(k => { if(val.includes(k)) matchCount++; });
+        
+        if(matchCount >= 2) {
+            handleFeedback(true, q.reason);
+        } else {
+            handleFeedback(false, `Gunakan data: "${q.factData}" dalam kalimat koreksimu.`);
+        }
+    }
+
+    function handleFeedback(isCorrect, reason) {
+        const f = document.getElementById('feedback');
+        const status = document.getElementById('feedback-status');
+        const rText = document.getElementById('feedback-reason');
+
+        if(isCorrect) {
+            status.innerText = "TEPAT! 🎯";
+            status.style.color = "var(--neon-green)";
+            score++;
+            playSFX('win');
+        } else {
+            status.innerText = "OPS! 💀";
+            status.style.color = "var(--neon-pink)";
+            lives--;
+            playSFX('lose');
+        }
+
+        rText.innerHTML = `<b>Analisis:</b><br>${reason}`;
+        f.classList.add('active');
+    }
+
+    function confirmFeedback() {
+        document.getElementById('feedback').classList.remove('active');
+        if(lives <= 0) return endGame(false);
+        if(currentQ === 2) {
+            currentQ++;
+            showScreen('screen-mid-rules');
+        } else {
+            currentQ++;
+            if(currentQ < questions.length) {
+                loadQuestion();
+            } else {
+                endGame(true);
+            }
+        }
+    }
+
+    function endGame(win) {
+        showScreen('screen-result');
+        const msg = document.getElementById('res-msg');
+        const btnNext = document.getElementById('btn-next-step');
+        const btnRetry = document.getElementById('btn-retry');
+        
+        document.getElementById('res-score').innerText = `${score}/6`;
+
+        if(score >= 5) {
+            msg.innerText = `Mantap, Leader ${userData.name}! Skor kamu sudah memenuhi syarat.`;
+            btnNext.style.display = "block";
+            btnRetry.style.display = "none";
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        } else {
+            msg.innerText = `Maaf, ${userData.name}. Kamu perlu minimal 5/6 benar untuk lanjut.`;
+            btnNext.style.display = "none";
+            btnRetry.style.display = "block";
+        }
+    }
+
+    function showReflection() {
+        showScreen('screen-reflection');
+    }
+
+    function finalPostTest() {
+        alert("Terima kasih atas komitmennya, Leader! Sistem akan beralih ke Post-Test.");
+    }
+</script>
+
+</body>
+</html>
